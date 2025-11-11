@@ -16,7 +16,7 @@ CORS(app)
 def load_words(dict_path: str | None, count: int, rng: random.Random) -> List[str]:
     """Load words from dictionary file or use fallback list."""
     fallback = [
-        "orchid","nebula","granite","whisper","cipher","lumen","quartz","saffron",
+        "orchid","nebulas","granite","whisper","cipher","lumen","quartz","saffron",
         "isotope","tangent","aurora","ember","matrix","quiver","spectrum","zephyr",
         "basilisk","topaz","harbor","mycelium","galaxy","silica","fjord","plasma"
     ]
