@@ -186,6 +186,22 @@ header h1 {
     line-height: 1.5;
 }
 
+.resize-disclaimer {
+    text-align: center;
+    color: #856404;
+    font-size: 0.85rem;
+    margin-top: 10px;
+    padding: 10px;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    line-height: 1.5;
+}
+
+.resize-disclaimer strong {
+    color: #856404;
+}
+
 .results-section {
     background: white;
     border-radius: 20px;

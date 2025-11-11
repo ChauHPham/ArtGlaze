@@ -258,12 +258,13 @@ def glaze_image():
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
         
-        # Check file size (limit to 10MB)
+        # Check file size (limit to 50MB - server will auto-resize dimensions if needed)
+        # Higher limit allows large files; dimensions are auto-resized to prevent timeouts
         file.seek(0, os.SEEK_END)
         file_size = file.tell()
         file.seek(0)
-        if file_size > 10 * 1024 * 1024:
-            return jsonify({'error': 'Image too large. Maximum size is 10MB. Please resize your image.'}), 400
+        if file_size > 50 * 1024 * 1024:
+            return jsonify({'error': 'Image file too large. Maximum file size is 50MB. Please compress or resize your image.'}), 400
         
         # Get parameters
         epsilon = float(request.form.get('epsilon', 10.0))

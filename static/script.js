@@ -82,12 +82,6 @@ async function processImage() {
         return;
     }
     
-    // Check file size (limit to 10MB)
-    if (currentFile.size > 10 * 1024 * 1024) {
-        showError('Image too large. Please use images under 10MB. Large images may timeout.');
-        return;
-    }
-    
     loading.style.display = 'block';
     resultsSection.style.display = 'none';
     hideError();
