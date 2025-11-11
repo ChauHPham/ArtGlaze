@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Glaze - AI Protection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛡️ Image Glaze</h1>
+            <p class="subtitle">Protect your images from AI training</p>
+        </header>
+
+        <div class="upload-section">
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-zone-content">
+                    <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <p class="drop-text">Drag & drop your image here</p>
+                    <p class="drop-subtext">or click to browse</p>
+                    <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label for="epsilon">Protection Strength (ε):</label>
+                    <input type="range" id="epsilon" min="7.0" max="20.0" step="0.5" value="10.0">
+                    <span id="epsilonValue">10.0</span>
+                    <small>Higher ε = stronger protection. 10 is recommended.</small>
+                </div>
+                <div class="control-group">
+                    <label for="seed">Random Seed:</label>
+                    <input type="number" id="seed" min="0" max="9999" value="1337">
+                    <small>Controls the randomized pattern of the glaze. Same seed + same settings = reproducible result.</small>
+                </div>
+                <div class="control-group">
+                    <label for="words">Payload Words:</label>
+                    <input type="number" id="words" min="0" max="50" value="25">
+                    <small>Embeds invisible random words in pixel LSBs to add entropy. Set to 0 to disable.</small>
+                </div>
+            </div>
+
+            <button id="processBtn" class="process-btn" disabled>Glaze Image</button>
+        </div>
+
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <div class="image-comparison">
+                <div class="image-box">
+                    <h3>Original</h3>
+                    <img id="originalImage" alt="Original image">
+                </div>
+                <div class="image-box">
+                    <h3>Glazed (Protected)</h3>
+                    <img id="glazedImage" alt="Glazed image" style="display: none;">
+                    <button id="downloadBtn" class="download-btn" style="display: none;">Download Glazed Image</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading" id="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Processing image...</p>
+        </div>
+
+        <div class="error" id="error" style="display: none;"></div>
+
+        <footer class="disclaimer">
+            <h4>Data Storage and Disclaimer</h4>
+            <p>This demo does not use a database and does not persist uploads. Images are processed in memory during your session, and the glazed result is returned to your browser as a data URL. No server-side copies are stored by default.</p>
+            <p>While glazing can significantly reduce the usefulness of images for AI style training, complete protection cannot be guaranteed. Adversaries and model pipelines evolve, and effectiveness may vary across models and post-processing steps. Consider layering defenses and staying updated with new tooling.</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
+
