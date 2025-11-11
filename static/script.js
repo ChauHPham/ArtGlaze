@@ -103,7 +103,7 @@ async function processImage() {
         const response = await fetch('/glaze', {
             method: 'POST',
             body: formData,
-            signal: AbortSignal.timeout(180000) // 3 minute timeout
+            signal: AbortSignal.timeout(180000) // 3 minute (180 second) timeout
         });
         
         // Check if response is OK before trying to parse JSON

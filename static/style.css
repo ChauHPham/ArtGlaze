@@ -175,6 +175,17 @@ header h1 {
     cursor: not-allowed;
 }
 
+.processing-note {
+    text-align: center;
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 15px;
+    padding: 10px;
+    background: #f8f9ff;
+    border-radius: 8px;
+    line-height: 1.5;
+}
+
 .results-section {
     background: white;
     border-radius: 20px;
