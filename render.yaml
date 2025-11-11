@@ -4,12 +4,12 @@ services:
     name: artglaze
     env: python
     plan: free                 # or starter, depending on your plan
-    buildCommand: |
-      pip install --upgrade pip setuptools wheel
-      pip install -r requirements.txt
-    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    buildCommand: pip install -r requirements.txt
+    startCommand: >
+      gunicorn wsgi:app
+      --workers ${WEB_CONCURRENCY:-1}
+      --threads ${WEB_THREADS:-2}
+      --timeout ${WEB_TIMEOUT:-120}
+      --graceful-timeout ${WEB_GRACEFUL_TIMEOUT:-120}
+      --bind 0.0.0.0:${PORT:-10000}
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.13.4
-      - key: POETRY_VERSION
-        value: 2.1.3
