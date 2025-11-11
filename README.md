@@ -140,3 +140,4 @@ You can run this in production with any Python host. Minimal options:
 
 Expose port 5000 (or `${PORT}` provided by the platform). No database is required.
 
+# ArtGlaze
