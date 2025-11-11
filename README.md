@@ -138,5 +138,6 @@ You can run this in production with any Python host. Minimal options:
   - Repo contains `Procfile`, `requirements.txt`, and `wsgi.py`
   - Create a new app, deploy from this folder; default process uses `web: gunicorn wsgi:app`
   - For Render, use `render.yaml` in this repo; it sets a longer Gunicorn timeout suited for image processing workloads. You can override via env vars (`WEB_TIMEOUT`, `WEB_CONCURRENCY`, etc.) based on your plan.
+  - **Important**: Render's free tier has a hard 30-second HTTP request timeout that cannot be overridden. Images are automatically resized to max 1500px to ensure processing completes in time. For larger images or slower processing, consider upgrading to a paid plan or using a different hosting service.
 
 Expose port 5000 (or `${PORT}` provided by the platform). No database is required.

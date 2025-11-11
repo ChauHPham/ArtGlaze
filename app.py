@@ -195,7 +195,7 @@ def glaze_like_perturbation(rgb: np.ndarray, epsilon: float, rng: random.Random)
     Combines multiple techniques for robustness:
     1. Style-aware perturbations (targets artistic style features)
     2. Multi-scale adversarial noise (harder to remove)
-    3. Frequency domain attacks (robust against upscaling)
+    3. Frequency domain attacks (robust against upscaling) - skipped for large images to save time
     """
     h, w, c = rgb.shape
     
@@ -206,8 +206,10 @@ def glaze_like_perturbation(rgb: np.ndarray, epsilon: float, rng: random.Random)
     rgb = multi_scale_adversarial_noise(rgb, epsilon * 0.6, rng)
     
     # Step 3: Apply frequency domain perturbations (harder to remove)
-    # Use smaller epsilon to avoid visible artifacts
-    rgb = frequency_domain_perturbation(rgb, epsilon * 0.3, rng)
+    # Skip for very large images (>1000px) to stay within Render's 30s timeout
+    # Frequency domain processing is expensive but less critical than style-aware perturbations
+    if h * w < 1000000:  # Only for images < 1MP (roughly 1000x1000)
+        rgb = frequency_domain_perturbation(rgb, epsilon * 0.3, rng)
     
     # Final clipping to ensure valid pixel values
     return np.clip(rgb, 0, 255).astype(np.uint8)
@@ -272,8 +274,9 @@ def glaze_image():
         # Read image using PIL (works with RGB directly)
         im = Image.open(io.BytesIO(file.read())).convert("RGB")
         
-        # Auto-resize very large images to prevent timeouts (max 2048px on longest side)
-        max_dimension = 2048
+        # Auto-resize very large images to prevent timeouts (max 1500px on longest side for Render compatibility)
+        # Render free tier has 30-second HTTP timeout, so we need faster processing
+        max_dimension = 1500
         if max(im.size) > max_dimension:
             im.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
         
