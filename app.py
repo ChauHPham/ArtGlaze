@@ -256,6 +256,13 @@ def glaze_image():
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
         
+        # Check file size (limit to 10MB)
+        file.seek(0, os.SEEK_END)
+        file_size = file.tell()
+        file.seek(0)
+        if file_size > 10 * 1024 * 1024:
+            return jsonify({'error': 'Image too large. Maximum size is 10MB. Please resize your image.'}), 400
+        
         # Get parameters
         epsilon = float(request.form.get('epsilon', 10.0))
         seed = int(request.form.get('seed', 1337))
@@ -264,6 +271,12 @@ def glaze_image():
         
         # Read image using PIL (works with RGB directly)
         im = Image.open(io.BytesIO(file.read())).convert("RGB")
+        
+        # Auto-resize very large images to prevent timeouts (max 2048px on longest side)
+        max_dimension = 2048
+        if max(im.size) > max_dimension:
+            im.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
+        
         rgb = np.array(im)
         
         # Apply glazing

@@ -82,6 +82,12 @@ async function processImage() {
         return;
     }
     
+    // Check file size (limit to 10MB)
+    if (currentFile.size > 10 * 1024 * 1024) {
+        showError('Image too large. Please use images under 10MB. Large images may timeout.');
+        return;
+    }
+    
     loading.style.display = 'block';
     resultsSection.style.display = 'none';
     hideError();
@@ -96,14 +102,30 @@ async function processImage() {
     try {
         const response = await fetch('/glaze', {
             method: 'POST',
-            body: formData
+            body: formData,
+            signal: AbortSignal.timeout(180000) // 3 minute timeout
         });
         
-        const data = await response.json();
-        
+        // Check if response is OK before trying to parse JSON
         if (!response.ok) {
-            throw new Error(data.error || 'Failed to process image');
+            let errorMsg = 'Server error occurred';
+            try {
+                const errorData = await response.json();
+                errorMsg = errorData.error || errorMsg;
+            } catch {
+                // If response isn't JSON (like 502 HTML error page)
+                if (response.status === 502 || response.status === 503) {
+                    errorMsg = 'Server timeout - image may be too large or processing took too long. Try a smaller image or lower protection strength.';
+                } else if (response.status === 504) {
+                    errorMsg = 'Request timeout - processing took too long. Try a smaller image.';
+                } else {
+                    errorMsg = `Server error (${response.status}). Please try again.`;
+                }
+            }
+            throw new Error(errorMsg);
         }
+        
+        const data = await response.json();
         
         glazedImageData = data.image;
         glazedImage.src = data.image;
@@ -112,7 +134,11 @@ async function processImage() {
         resultsSection.style.display = 'block';
         
     } catch (err) {
-        showError(err.message || 'An error occurred while processing the image');
+        if (err.name === 'AbortError' || err.name === 'TimeoutError') {
+            showError('Request timed out. The image may be too large. Try a smaller image or lower protection strength.');
+        } else {
+            showError(err.message || 'An error occurred while processing the image');
+        }
     } finally {
         loading.style.display = 'none';
         processBtn.disabled = false;
