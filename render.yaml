@@ -1,0 +1,15 @@
+# render.yaml
+services:
+  - type: web
+    name: artglaze
+    env: python
+    plan: free                 # or starter, depending on your plan
+    buildCommand: |
+      pip install --upgrade pip setuptools wheel
+      pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.4
+      - key: POETRY_VERSION
+        value: 2.1.3
