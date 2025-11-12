@@ -11,6 +11,8 @@ const epsilonSlider = document.getElementById('epsilon');
 const epsilonValue = document.getElementById('epsilonValue');
 const seedInput = document.getElementById('seed');
 const wordsInput = document.getElementById('words');
+const seedError = document.getElementById('seedError');
+const wordsError = document.getElementById('wordsError');
 
 let currentFile = null;
 let glazedImageData = null;
@@ -18,6 +20,92 @@ let glazedImageData = null;
 // Update epsilon value display
 epsilonSlider.addEventListener('input', (e) => {
     epsilonValue.textContent = e.target.value;
+});
+
+// Sanitize seed input function
+function sanitizeSeed(value) {
+    // Remove all non-numeric characters
+    value = value.replace(/[^0-9]/g, '');
+    // Limit to 4 digits
+    if (value.length > 4) {
+        value = value.slice(0, 4);
+    }
+    return value;
+}
+
+// Sanitize and validate seed input (must be exactly 4 digits, 1000-2000)
+seedInput.addEventListener('input', (e) => {
+    let value = sanitizeSeed(e.target.value);
+    e.target.value = value;
+    
+    // Validate range
+    if (value.length === 0) {
+        seedError.style.display = 'none';
+        seedInput.classList.remove('error');
+        return;
+    }
+    
+    const numValue = parseInt(value, 10);
+    if (isNaN(numValue) || value.length !== 4 || numValue < 1000 || numValue > 2000) {
+        seedError.textContent = 'Random seed must be exactly 4 digits between 1000-2000';
+        seedError.style.display = 'block';
+        seedInput.classList.add('error');
+    } else {
+        seedError.style.display = 'none';
+        seedInput.classList.remove('error');
+    }
+});
+
+// Sanitize pasted content for seed
+seedInput.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const pasted = (e.clipboardData || window.clipboardData).getData('text');
+    const sanitized = sanitizeSeed(pasted);
+    seedInput.value = sanitized;
+    seedInput.dispatchEvent(new Event('input'));
+});
+
+// Sanitize words input function
+function sanitizeWords(value) {
+    // Remove all non-numeric characters
+    value = value.replace(/[^0-9]/g, '');
+    // Limit to 3 digits
+    if (value.length > 3) {
+        value = value.slice(0, 3);
+    }
+    return value;
+}
+
+// Sanitize and validate words input (must be 1-3 digits, 0-100)
+wordsInput.addEventListener('input', (e) => {
+    let value = sanitizeWords(e.target.value);
+    e.target.value = value;
+    
+    // Validate range
+    if (value.length === 0) {
+        wordsError.style.display = 'none';
+        wordsInput.classList.remove('error');
+        return;
+    }
+    
+    const numValue = parseInt(value, 10);
+    if (isNaN(numValue) || numValue < 0 || numValue > 100) {
+        wordsError.textContent = 'Payload words must be a number between 0-100';
+        wordsError.style.display = 'block';
+        wordsInput.classList.add('error');
+    } else {
+        wordsError.style.display = 'none';
+        wordsInput.classList.remove('error');
+    }
+});
+
+// Sanitize pasted content for words
+wordsInput.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const pasted = (e.clipboardData || window.clipboardData).getData('text');
+    const sanitized = sanitizeWords(pasted);
+    wordsInput.value = sanitized;
+    wordsInput.dispatchEvent(new Event('input'));
 });
 
 // Drop zone click
@@ -82,6 +170,46 @@ async function processImage() {
         return;
     }
     
+    // Validate inputs before processing
+    const seedValue = seedInput.value.trim();
+    const wordsValue = wordsInput.value.trim();
+    
+    // Validate seed
+    if (seedValue.length === 0) {
+        seedError.textContent = 'Random seed is required';
+        seedError.style.display = 'block';
+        seedInput.classList.add('error');
+        return;
+    }
+    const seedNum = parseInt(seedValue, 10);
+    if (isNaN(seedNum) || seedValue.length !== 4 || seedNum < 1000 || seedNum > 2000) {
+        seedError.textContent = 'Random seed must be exactly 4 digits between 1000-2000';
+        seedError.style.display = 'block';
+        seedInput.classList.add('error');
+        return;
+    }
+    
+    // Validate words
+    if (wordsValue.length === 0) {
+        wordsError.textContent = 'Payload words is required';
+        wordsError.style.display = 'block';
+        wordsInput.classList.add('error');
+        return;
+    }
+    const wordsNum = parseInt(wordsValue, 10);
+    if (isNaN(wordsNum) || wordsNum < 0 || wordsNum > 100) {
+        wordsError.textContent = 'Payload words must be a number between 0-100';
+        wordsError.style.display = 'block';
+        wordsInput.classList.add('error');
+        return;
+    }
+    
+    // Clear any previous errors
+    seedError.style.display = 'none';
+    wordsError.style.display = 'none';
+    seedInput.classList.remove('error');
+    wordsInput.classList.remove('error');
+    
     loading.style.display = 'block';
     resultsSection.style.display = 'none';
     hideError();
@@ -90,8 +218,9 @@ async function processImage() {
     const formData = new FormData();
     formData.append('image', currentFile);
     formData.append('epsilon', epsilonSlider.value);
-    formData.append('seed', seedInput.value);
-    formData.append('words', wordsInput.value);
+    // Sanitize: ensure numeric values only
+    formData.append('seed', seedNum.toString());
+    formData.append('words', wordsNum.toString());
     
     try {
         const response = await fetch('/glaze', {
