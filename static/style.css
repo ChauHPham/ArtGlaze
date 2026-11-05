@@ -17,13 +17,10 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    /* Pastel bi gradient: pink -> purple -> blue, with medium polka dots.
-       Dots are a separate background layer on top of the gradient. */
+    /* Pastel bi gradient: pink -> purple -> blue, plain (no pattern). */
     background-color: #d9a7e8;
-    background-image:
-        radial-gradient(circle, rgba(255, 255, 255, 0.45) 6px, transparent 7px),
-        linear-gradient(135deg, #f7b8d0 0%, #d9a7e8 48%, #a9c6f5 100%);
-    background-size: 36px 36px, 100% 100%;
+    background-image: linear-gradient(135deg, #f7b8d0 0%, #d9a7e8 48%, #a9c6f5 100%);
+    background-size: 100% 100%;
     background-attachment: fixed;
     min-height: 100vh;
     padding: 20px;
