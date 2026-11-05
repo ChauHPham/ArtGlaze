@@ -83,7 +83,11 @@ def frequency_domain_perturbation(rgb: np.ndarray, epsilon: float, rng: random.R
         magnitude_perturb = np.ones_like(magnitude)
         num_perturbed = np.sum(freq_mask)
         if num_perturbed > 0:
-            perturbations = np.array([rng.uniform(-epsilon * 0.01, epsilon * 0.01) for _ in range(num_perturbed)])
+            # Vectorised: one numpy call instead of a Python loop over
+            # ~470k bins per channel. The old loop built a Python list
+            # first, which was the main memory/time cost on small hosts.
+            np_rng = np.random.default_rng(rng.getrandbits(32))
+            perturbations = np_rng.uniform(-epsilon * 0.01, epsilon * 0.01, size=num_perturbed)
             magnitude_perturb[freq_mask] = 1.0 + perturbations
         
         # Reconstruct with perturbed magnitude
@@ -104,18 +108,21 @@ def multi_scale_adversarial_noise(rgb: np.ndarray, epsilon: float, rng: random.R
     h, w, c = rgb.shape
     out = rgb.astype(np.float32)
     
-    # Multiple scales of noise
-    scales = [1.0, 0.5, 0.25, 2.0]
-    weights = [0.4, 0.3, 0.2, 0.1]
-    
+    # Multiple scales of noise. The 2.0x scale was dropped: it generated
+    # noise at double resolution (27M values at 1500px) only to downscale
+    # it, and that single allocation blew past Render free's 512 MB.
+    scales = [1.0, 0.5, 0.25]
+    weights = [0.5, 0.3, 0.2]
+
     for scale, weight in zip(scales, weights):
         scale_h, scale_w = int(h * scale), int(w * scale)
         if scale_h < 2 or scale_w < 2:
             continue
-            
-        # Generate noise at this scale
-        noise = np.array([rng.normalvariate(0, 1) for _ in range(scale_h * scale_w * c)], 
-                        dtype=np.float32).reshape(scale_h, scale_w, c)
+
+        # Generate noise at this scale, vectorised: numpy draws the whole
+        # array at once instead of a Python loop over every pixel.
+        np_rng = np.random.default_rng(rng.getrandbits(32))
+        noise = np_rng.standard_normal(size=(scale_h, scale_w, c), dtype=np.float32)
         
         # Emphasize high-frequency components
         if scale_h > 4 and scale_w > 4:
@@ -151,9 +158,10 @@ def style_aware_perturbation(rgb: np.ndarray, epsilon: float, rng: random.Random
     edge_mask = (style_features['edges'][0].astype(np.float32) / 255.0)[:, :, np.newaxis]
     edge_mask = np.repeat(edge_mask, c, axis=2)
     
-    # Generate structured noise that disrupts style perception
-    noise = np.array([rng.normalvariate(0, 1) for _ in range(h*w*c)], 
-                     dtype=np.float32).reshape(h, w, c)
+    # Generate structured noise that disrupts style perception,
+    # vectorised: one numpy call for the whole (h, w, c) array.
+    np_rng = np.random.default_rng(rng.getrandbits(32))
+    noise = np_rng.standard_normal(size=(h, w, c), dtype=np.float32)
     
     # Apply multi-scale blur to create structured patterns
     low1 = cv2.GaussianBlur(noise, (0, 0), sigmaX=2.0)
@@ -205,9 +213,11 @@ def glaze_like_perturbation(rgb: np.ndarray, epsilon: float, rng: random.Random)
     # Step 2: Add multi-scale noise for robustness
     rgb = multi_scale_adversarial_noise(rgb, epsilon * 0.6, rng)
     
-    # Step 3: Apply frequency domain perturbations (harder to remove)
-    # Skip for very large images (>1000px) to stay within Render's 30s timeout
-    # Frequency domain processing is expensive but less critical than style-aware perturbations
+    # Step 3: Apply frequency domain perturbations (harder to remove).
+    # Skipped for very large images (>1000px): FFT work is expensive and
+    # less critical than the style-aware perturbations. (Note: Render has
+    # no 30-second HTTP timeout — the old comment claiming one was wrong;
+    # the real free-tier limit is 512 MB of RAM.)
     if h * w < 1000000:  # Only for images < 1MP (roughly 1000x1000)
         rgb = frequency_domain_perturbation(rgb, epsilon * 0.3, rng)
     
@@ -281,8 +291,8 @@ def glaze_image():
         # Read image using PIL (works with RGB directly)
         im = Image.open(io.BytesIO(file.read())).convert("RGB")
         
-        # Auto-resize very large images to prevent timeouts (max 1500px on longest side for Render compatibility)
-        # Render free tier has 30-second HTTP timeout, so we need faster processing
+        # Auto-resize very large images (max 1500px on longest side) to
+        # keep memory and processing time within Render free's 512 MB
         max_dimension = 1500
         if max(im.size) > max_dimension:
             im.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
