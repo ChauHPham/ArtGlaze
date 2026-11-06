@@ -276,20 +276,37 @@ def glaze_image():
         if file_size > 50 * 1024 * 1024:
             return jsonify({'error': 'Image file too large. Maximum file size is 50MB. Please compress or resize your image.'}), 400
         
-        # Get parameters with validation
-        epsilon = float(request.form.get('epsilon', 10.0))
-        seed = int(request.form.get('seed', 1500))
-        words = int(request.form.get('words', 25))
-        dict_path = request.form.get('dict-path', None)
-        
+        # Get parameters with validation. dict-path is intentionally NOT
+        # read from the request: letting a client name a server-side file
+        # for load_words() would allow reading arbitrary local files
+        # (their contents get embedded into the returned image).
+        # The built-in word list is always used instead.
+        try:
+            epsilon = float(request.form.get('epsilon', 10.0))
+            seed = int(request.form.get('seed', 1500))
+            words = int(request.form.get('words', 25))
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Invalid numeric parameter'}), 400
+        dict_path = None
+
         # Validate ranges
+        if not 0 <= epsilon <= 50:
+            return jsonify({'error': 'Protection strength must be between 0 and 50'}), 400
         if seed < 1000 or seed > 2000:
             return jsonify({'error': 'Random seed must be between 1000 and 2000'}), 400
         if words < 0 or words > 100:
             return jsonify({'error': 'Payload words must be between 0 and 100'}), 400
         
-        # Read image using PIL (works with RGB directly)
-        im = Image.open(io.BytesIO(file.read())).convert("RGB")
+        # Read image using PIL (works with RGB directly). Image.open is
+        # lazy: dimensions come from the header without decoding pixels,
+        # so check the pixel count FIRST -- a crafted huge-dimension
+        # image would otherwise allocate hundreds of MB on .convert()
+        # before the 1500px resize ever runs (decompression bomb).
+        im = Image.open(io.BytesIO(file.read()))
+        max_pixels = 25_000_000
+        if im.size[0] * im.size[1] > max_pixels:
+            return jsonify({'error': 'Image dimensions too large. Maximum is 25 megapixels.'}), 400
+        im = im.convert("RGB")
         
         # Auto-resize very large images (max 1500px on longest side) to
         # keep memory and processing time within Render free's 512 MB
@@ -331,8 +348,10 @@ def glaze_image():
             'image': f'data:image/png;base64,{img_base64}'
         })
     
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        # Never leak internals (paths, library errors) to the client.
+        app.logger.exception("glaze failed")
+        return jsonify({'error': 'Processing failed. Please try a different image.'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
